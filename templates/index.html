@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stock Query</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+</head>
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-7">
+                <div class="card">
+                    <div class="card-body">
+                        <h1 class="mb-4">Stock Query</h1>
+                        <form id="search-form">
+                            <div class="mb-3">
+                                <label for="category" class="form-label">Select Category:</label>
+                                <select name="category" id="category" class="form-select">
+                                    {% for category in categories_and_products.keys() %}
+                                        <option value="{{ category }}">{{ category }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="product" class="form-label">Select Product:</label>
+                                <select name="product" id="product" class="form-select" multiple>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Search</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-5">
+            <div class="col-lg-6 mx-auto">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="hide-zero-stock" checked>
+                    <label class="form-check-label" for="hide-zero-stock">Hide 0 Stock Items</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="show-1-5-stock">
+                    <label class="form-check-label" for="show-1-5-stock">Show Stock Items with Value between 1-5</label>
+                </div>
+                <!-- <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="show-zero-stock" >
+                    <label class="form-check-label" for="show-zero-stock">Show 0 Stock Items</label>
+                </div> -->
+            </div>
+        </div>
+        <div class="row mt-3" id="result-section">
+        </div>
+    </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+<script>
+    const categoryDropdown = document.getElementById('category');
+    const productDropdown = document.getElementById('product');
+    const categoriesAndProducts = {{ categories_and_products|tojson }};
+    let results = [];
+
+    function displayResults() {
+        const hideZeroStock = $('#hide-zero-stock').is(':checked');
+        const showZeroStock = $('#show-zero-stock').is(':checked');
+        const show1To5Stock = $('#show-1-5-stock').is(':checked');
+
+        const filteredResults = results.filter(item => {
+            if (hideZeroStock && item.Stock === 0) {
+                return false;
+            }
+            if (showZeroStock && item.Stock == 0) {
+                return false;
+            }
+            if (show1To5Stock && (item.Stock < 1 || item.Stock > 5)) {
+                return false;
+            }
+            return true;
+        });
+
+        const resultSection = $('#result-section');
+        resultSection.empty();
+        if (filteredResults.length > 0) {
+            const table = $('<table>').addClass('table table-bordered').appendTo(resultSection);
+            const tableHeaders = Object.keys(filteredResults[0]);
+            const headerRow = $('<tr>').appendTo(table);
+            for (const header of tableHeaders) {
+                $('<th>').text(header).appendTo(headerRow);
+            }
+            for (const item of filteredResults) {
+                const dataRow = $('<tr>').appendTo(table);
+                for (const header of tableHeaders) {
+                    $('<td>').text(item[header]).appendTo(dataRow);
+                }
+            }
+        } else {
+            resultSection.text('No results found.');
+        }
+    }
+
+    $(document).ready(function() {
+        $(productDropdown).select2({
+            placeholder: 'Select products',
+            width: '100%'
+        });
+
+        categoryDropdown.dispatchEvent(new Event('change'));
+    });
+
+    categoryDropdown.addEventListener('change', () => {
+        const selectedCategory = categoryDropdown.value;
+        const products = categoriesAndProducts[selectedCategory] || [];
+
+        $(productDropdown).empty();
+
+        products.forEach((product) => {
+            const option = new Option(product, product, false, false);
+            productDropdown.appendChild(option);
+        });
+
+        $(productDropdown).trigger('change');
+    });
+
+    $('#search-form').submit(function(event) {
+        event.preventDefault();
+        const formData = $(this).serialize();
+        $.ajax({
+            type: 'POST',
+            url: '/',
+            data: formData,
+            dataType: 'json',
+            success: function(response) {
+                results = response.stock_items;
+                displayResults();
+            },
+            error: function(error) {
+                console.error('Error:', error);
+            }
+        });
+    });
+
+    $('#hide-zero-stock').on('change', displayResults);
+    $('#show-1-5-stock').on('change', displayResults);
+
+    displayResults();
+</script>
+
+</body>
+</html>
