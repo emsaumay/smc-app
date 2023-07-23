@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, send_from_directory
 import sqlite3, os
 from werkzeug.utils import secure_filename
 from process_data import process_data
@@ -83,5 +83,14 @@ def upload_file():
         print("Error while rewriting the data:", e)
     finally:
         conn.close()
+
+@app.route('/manifest.json')
+def serve_manifest():
+    return send_from_directory('pwa', 'manifest.json', mimetype='application/json')
+
+@app.route('/service-worker.js')
+def serve_service_worker():
+    return send_from_directory('pwa', 'service-worker.js', mimetype='application/javascript')
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
