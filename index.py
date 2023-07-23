@@ -1,8 +1,11 @@
 from flask import Flask, request, jsonify, render_template
-import sqlite3
+import sqlite3, os
+from werkzeug.utils import secure_filename
+from process_data import process_data
 
 app = Flask(__name__)
-DATABASE = 'smc.db'  # Replace with your database name
+DATABASE = 'smc.db'  
+os.makedirs('data', exist_ok=True)
 
 def get_db_connection():
     connection = sqlite3.connect(DATABASE)
@@ -21,16 +24,16 @@ def index():
         connection = get_db_connection()
 
         if not products:
-            cursor = connection.execute('SELECT NameToDisplay AS `Name`, ManufacturingCo AS `Vendor`, MarketingCo AS `Category`, StockValue, LotMRP AS `MRP`, Size, Stock FROM stock WHERE Category=?', [category])
+            cursor = connection.execute('SELECT NameToDisplay AS `Name`, ManufacturingCo AS `Vendor`, MarketingCo AS `Category`, Barcode, RefNo AS `Invoice No.`, LotMRP AS `MRP`, Size, Stock FROM stock WHERE Category=? ORDER BY Name, Size', [category])
         else:
-            cursor = connection.execute('SELECT NameToDisplay AS `Name`, ManufacturingCo AS `Vendor`, MarketingCo AS `Category`, StockValue, LotMRP AS `MRP`, Size, Stock FROM stock WHERE Category=? AND Product IN ({})'.format(','.join('?' for _ in products)), [category, *products])
+            cursor = connection.execute('SELECT NameToDisplay AS `Name`, ManufacturingCo AS `Vendor`, MarketingCo AS `Category`, Barcode, RefNo AS `Invoice No.`, LotMRP AS `MRP`, Size, Stock FROM stock WHERE Category=? AND Product IN ({}) ORDER BY Name, Size'.format(','.join('?' for _ in products)), [category, *products])
         stock_items = cursor.fetchall()
         close_db_connection(connection)
         return jsonify(stock_items=[dict(item) for item in stock_items])
 
     else:
         connection = get_db_connection()
-        cursor = connection.execute('SELECT DISTINCT Category FROM stock')
+        cursor = connection.execute('SELECT DISTINCT Category FROM stock ORDER BY Category ASC')
         categories = [row['Category'] for row in cursor.fetchall()]
 
         categories_and_products = {}
@@ -43,6 +46,42 @@ def index():
 
         return render_template('index.html', categories_and_products=categories_and_products)
 
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part in the request'}), 400
 
+    file = request.files['file']
+
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    filename = secure_filename(file.filename)
+    file_path = os.path.join('data', filename)
+
+    try:
+        file.save(file_path)
+        print(f"File '{filename}' uploaded successfully")
+        
+        process_data(file_path)
+
+        return jsonify({'message': 'File uploaded and data processed successfully'}), 200
+    except Exception as e:
+        print(e)
+        return jsonify({'error': 'Error while saving the file'}), 500
+
+    SALES_DB_FILE = 'sales.db'
+    conn = sqlite3.connect(SALES_DB_FILE)
+    cursor = conn.cursor()
+
+    try:
+        with open(file_path, 'rb') as f:
+            cursor.executescript(f.read().decode('utf-8'))
+        conn.commit()
+        print(f"Data from '{file_path}' has been successfully uploaded and rewritten.")
+    except sqlite3.Error as e:
+        print("Error while rewriting the data:", e)
+    finally:
+        conn.close()
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
