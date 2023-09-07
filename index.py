@@ -7,6 +7,7 @@ import requests
 app = Flask(__name__)
 DATABASE = 'smc.db'  
 os.makedirs('data', exist_ok=True)
+SERVER_URL = ""
 
 def get_db_connection():
     connection = sqlite3.connect(DATABASE)
@@ -64,7 +65,7 @@ def upload_file():
         file.save(file_path)
         print(f"File '{filename}' uploaded successfully")
         headers = {"content-type": "text/plain"}
-        requests.post("http://62.210.181.47:9009/server", data=str("DB File Received"), headers=headers)
+        requests.post(SERVER_URL, data=str("DB File Received"), headers=headers)
         process_data(file_path)
 
         return jsonify({'message': 'File uploaded and data processed successfully'}), 200
