@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template, send_from_directory
 import sqlite3, os
 from werkzeug.utils import secure_filename
 from process_data import process_data
+import requests
 
 app = Flask(__name__)
 DATABASE = 'smc.db'  
@@ -24,9 +25,9 @@ def index():
         connection = get_db_connection()
 
         if not products:
-            cursor = connection.execute('SELECT NameToDisplay AS `Name`, ManufacturingCo AS `Vendor`, MarketingCo AS `Category`, Barcode, RefNo AS `Invoice No.`, LotMRP AS `MRP`, Size, Stock FROM stock WHERE Category=? ORDER BY Name, Size', [category])
+            cursor = connection.execute('SELECT NameToDisplay AS `Name`, Vendor, Category, Barcode, PurchaseInvNo AS `Invoice No.`, MRP, Size, CurStock AS `Stock` FROM stock WHERE Category=? ORDER BY Name, Size', [category])
         else:
-            cursor = connection.execute('SELECT NameToDisplay AS `Name`, ManufacturingCo AS `Vendor`, MarketingCo AS `Category`, Barcode, RefNo AS `Invoice No.`, LotMRP AS `MRP`, Size, Stock FROM stock WHERE Category=? AND Product IN ({}) ORDER BY Name, Size'.format(','.join('?' for _ in products)), [category, *products])
+            cursor = connection.execute('SELECT NameToDisplay AS `Name`, Vendor, Category, Barcode, PurchaseInvNo AS `Invoice No.`, MRP, Size, CurStock AS `Stock` FROM stock WHERE Category=? AND Product IN ({}) ORDER BY Name, Size'.format(','.join('?' for _ in products)), [category, *products])
         stock_items = cursor.fetchall()
         close_db_connection(connection)
         return jsonify(stock_items=[dict(item) for item in stock_items])
@@ -62,27 +63,14 @@ def upload_file():
     try:
         file.save(file_path)
         print(f"File '{filename}' uploaded successfully")
-        
+        headers = {"content-type": "text/plain"}
+        requests.post("http://62.210.181.47:9009/server", data=str("DB File Received"), headers=headers)
         process_data(file_path)
 
         return jsonify({'message': 'File uploaded and data processed successfully'}), 200
     except Exception as e:
         print(e)
         return jsonify({'error': 'Error while saving the file'}), 500
-
-    SALES_DB_FILE = 'sales.db'
-    conn = sqlite3.connect(SALES_DB_FILE)
-    cursor = conn.cursor()
-
-    try:
-        with open(file_path, 'rb') as f:
-            cursor.executescript(f.read().decode('utf-8'))
-        conn.commit()
-        print(f"Data from '{file_path}' has been successfully uploaded and rewritten.")
-    except sqlite3.Error as e:
-        print("Error while rewriting the data:", e)
-    finally:
-        conn.close()
 
 @app.route('/manifest.json')
 def serve_manifest():
@@ -93,4 +81,4 @@ def serve_service_worker():
     return send_from_directory('pwa', 'service-worker.js', mimetype='application/javascript')
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True)
+    app.run(host='0.0.0.0', port=1337, debug=True)
