@@ -1,5 +1,5 @@
 ## Sales & Inventory Management App
-Sales & inventory management app with Python Flask, PostgreSQL & Bootstrap
+Progressive Web Sales & Inventory Management App with Python Flask, PostgreSQL & Bootstrap.
 
 ## Features
 - View Sales Transactions With Date Picker.
