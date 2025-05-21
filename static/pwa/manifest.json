@@ -1,0 +1,21 @@
+{
+    "name": "Stock Query App",
+    "short_name": "Stock Query",
+    "start_url": "/",
+    "display": "standalone",
+    "theme_color": "#007BFF",
+    "background_color": "#FFFFFF",
+    "icons": [
+      {
+        "src": "pwa/128.png",
+        "type": "image/png",
+        "sizes": "128x128"
+      },
+      {
+        "src": "pwa/512.png",
+        "type": "image/png",
+        "sizes": "512x512"
+      }
+    ]
+  }
+  

@@ -1,1 +1,33 @@
-flask
+# Django and core dependencies
+Django>=5.2.6,<6.0
+djangorestframework>=3.14.0
+
+# Database
+psycopg2-binary>=2.9.0  # PostgreSQL adapter (optional, for production)
+
+# File handling and data processing
+openpyxl>=3.1.0         # Excel file support
+pandas>=2.0.0           # Data processing (optional)
+Pillow>=10.0.0          # Image processing for user uploads
+
+# Production server
+gunicorn>=21.0.0        # WSGI server for production
+whitenoise>=6.0.0       # Static file serving
+
+# Development and debugging
+python-decouple>=3.8    # Environment variable management
+django-debug-toolbar>=4.2.0  # Development debugging
+
+# Security and utilities
+django-cors-headers>=4.3.0  # CORS handling
+django-extensions>=3.2.0    # Additional Django utilities
+
+# Testing
+pytest>=7.4.0
+pytest-django>=4.5.0
+coverage>=7.3.0
+
+# Optional: Production database and caching
+# redis>=5.0.0           # Redis for caching/sessions
+# celery>=5.3.0          # Task queue
+# django-celery-beat>=2.5.0  # Periodic tasks
